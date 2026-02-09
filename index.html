@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EQ Monitor Pro v2.1</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root { --bg: #0f172a; --primary: #38bdf8; --danger: #f43f5e; --success: #10b981; --warning: #f59e0b; }
+        body { font-family: 'Kanit', sans-serif; background: #0f172a; color: white; display: flex; justify-content: center; padding: 20px; }
+        .container { width: 100%; max-width: 400px; }
+        .card { background: rgba(30, 41, 59, 0.7); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 20px; margin-bottom: 15px; text-align: center; }
+        .status-box { border-bottom: 3px solid var(--primary); }
+        .sensor-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .btn { width: 100%; padding: 15px; border-radius: 12px; border: none; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        .btn-test { background: var(--primary); }
+        .btn-off { background: var(--warning); }
+        .alert-active { border: 2px solid var(--danger); animation: pulse 1s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="main-card" class="card status-box">
+            <h1 id="status-text" style="color: var(--success);">ปลอดภัย</h1>
+            <p>ระบบเฝ้าระวัง 24 ชม.</p>
+        </div>
+
+        <div class="sensor-grid">
+            <div class="card">
+                <i class="fas fa-thermometer-half"></i><br>
+                <small>อุณหภูมิ</small>
+                <h2 id="v-temp">--</h2>
+            </div>
+            <div class="card">
+                <i class="fas fa-volume-up"></i><br>
+                <small>เสียง</small>
+                <h2 id="v-sound">--</h2>
+            </div>
+        </div>
+
+        <div class="card">
+            <button class="btn btn-test" onclick="sendCmd('BUZZER_TEST')">ทดสอบไซเรน</button>
+            <button class="btn btn-off" onclick="sendCmd('BUZZER_OFF')">ปิดเสียงแจ้งเตือน</button>
+        </div>
+    </div>
+
+    <script>
+        // ข้อมูลจากรูปของคุณ
+        const config = { databaseURL: "https://kunthida-6ab5a-default-rtdb.firebaseio.com/" };
+        firebase.initializeApp(config);
+        const db = firebase.database();
+
+        // ดึงข้อมูลจาก Path: earthquake
+        db.ref('earthquake').on('value', (s) => {
+            const d = s.val();
+            if(!d) return;
+
+            document.getElementById('v-temp').innerText = d.temp + "°C";
+            document.getElementById('v-sound').innerText = (d.sound === 1) ? "ผิดปกติ" : "ปกติ";
+
+            const main = document.getElementById('main-card');
+            const txt = document.getElementById('status-text');
+
+            if(d.status === 1) {
+                txt.innerText = "แจ้งเตือน!";
+                txt.style.color = "var(--danger)";
+                main.classList.add('alert-active');
+            } else {
+                txt.innerText = "ปลอดภัย";
+                txt.style.color = "var(--success)";
+                main.classList.remove('alert-active');
+            }
+        });
+
+        function sendCmd(c) {
+            db.ref('earthquake/control').update({ command: c, ts: Date.now() });
+        }
+    </script>
+</body>
+</html>
